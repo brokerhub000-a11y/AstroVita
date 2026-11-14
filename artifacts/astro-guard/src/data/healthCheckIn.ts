@@ -56,3 +56,53 @@ export const MEASUREMENT_QUALITY_LABELS = {
 export function formatCheckInValue(value: number | undefined, decimals = 0): string {
   return value === undefined ? 'Not entered' : decimals ? value.toFixed(decimals) : String(value);
 }
+
+const CHECK_IN_CSV_COLUMNS: Array<{
+  header: string;
+  value: (record: HealthCheckInRecord) => string | number | undefined;
+}> = [
+  { header: 'Recorded at (ISO 8601)', value: (record) => record.recordedAt },
+  { header: 'Heart rate (bpm)', value: (record) => record.heartRate },
+  { header: 'Blood pressure systolic (mmHg)', value: (record) => record.bloodPressureSystolic },
+  { header: 'Blood pressure diastolic (mmHg)', value: (record) => record.bloodPressureDiastolic },
+  { header: 'Breathing rate (breaths/min)', value: (record) => record.breathingRate },
+  { header: 'Blood glucose (mg/dL)', value: (record) => record.bloodGlucose },
+  { header: 'Body temperature (°C)', value: (record) => record.bodyTemperatureC },
+  { header: 'Sleep duration (hours)', value: (record) => record.sleepHours },
+  { header: 'Exercise duration (minutes)', value: (record) => record.exerciseMinutes },
+  { header: 'Fatigue (self-reported, 1–10)', value: (record) => record.fatigue },
+  {
+    header: 'Measurement context',
+    value: (record) => record.measurementContext
+      ? MEASUREMENT_CONTEXT_LABELS[record.measurementContext]
+      : undefined,
+  },
+  {
+    header: 'Measurement quality',
+    value: (record) => record.measurementQuality
+      ? MEASUREMENT_QUALITY_LABELS[record.measurementQuality]
+      : undefined,
+  },
+  {
+    header: 'Mood (self-reported)',
+    value: (record) => record.mood
+      ? record.mood[0].toUpperCase() + record.mood.slice(1)
+      : undefined,
+  },
+];
+
+function escapeCsvCell(value: string | number | undefined): string {
+  const text = value === undefined ? '' : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function createHealthCheckInCsv(records: HealthCheckInRecord[]): string {
+  const header = CHECK_IN_CSV_COLUMNS.map(({ header: column }) => escapeCsvCell(column)).join(',');
+  const rows = records.map((record) =>
+    CHECK_IN_CSV_COLUMNS
+      .map(({ value }) => escapeCsvCell(value(record)))
+      .join(','),
+  );
+
+  return `\uFEFF${[header, ...rows].join('\r\n')}\r\n`;
+}

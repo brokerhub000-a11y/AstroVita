@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowUpRight,
   BookOpen,
+  Download,
   Maximize2,
   Play,
   RotateCcw,
@@ -38,6 +39,7 @@ import {
 } from "@/data/demoHealth";
 import {
   formatCheckInValue,
+  createHealthCheckInCsv,
   MEASUREMENT_CONTEXT_LABELS,
   type HealthCheckInRecord,
 } from "@/data/healthCheckIn";
@@ -341,6 +343,20 @@ export default function Dashboard() {
         : [record]);
     setCheckInMode(true);
     setCheckInOpen(false);
+  };
+  const downloadCheckIns = () => {
+    if (!checkIns.length) return;
+    const file = new Blob([createHealthCheckInCsv(checkIns)], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `astrovita-check-ins-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   return (
@@ -784,6 +800,20 @@ export default function Dashboard() {
                   value is safe.
                 </p>
               )}
+              <p className="fine" data-testid="text-checkin-export-privacy">
+                The CSV contains personal health data. Download it only if you
+                want to keep a copy; it is not uploaded or saved automatically.
+              </p>
+              <div className="checkin-session-actions">
+                <button
+                  className="icon-btn"
+                  onClick={downloadCheckIns}
+                  disabled={!checkIns.length}
+                  data-testid="button-download-checkins"
+                >
+                  <Download size={14} /> Download session CSV
+                </button>
+              </div>
               {!info && (
                 <p className="fine" data-testid="text-checkin-timestamp">
                   Recorded {checkInTime} · stored in this page only.
