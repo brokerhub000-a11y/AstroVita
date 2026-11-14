@@ -18,18 +18,29 @@ Then open `http://localhost:5173`. For project details and data limitations, see
 
 ## Deploy to Railway
 
-The repository's `.railway/railway.ts` defines one Railway web service sourced
-from `brokerhub000-a11y/AstroVita`. The current UI uses local demo/check-in state
-and does not depend on the workspace API server.
+The root `package.json` provides the build and start scripts that Railway's
+Railpack detects when deploying this GitHub repository. Keep the service's root
+directory at the repository root.
 
-After connecting the GitHub repository to Railway and installing the Railway
-CLI, run these commands from the repository root:
+In Railway, connect `brokerhub000-a11y/AstroVita` and deploy branch `main`.
+The commands can be left on automatic detection, or set explicitly:
 
-```bash
-railway config plan
-railway config apply
-```
+- Build command: `pnpm run build`
+- Start command: `pnpm start`
+- Healthcheck path: `/`
 
-Review the plan before applying it. Railway then builds the Vite app and serves
-the static output on its assigned port, including client-side routes such as
-`/dashboard`.
+The build script sets the Vite build-time base path and port. At runtime, the
+static server listens on Railway's assigned `PORT`, including client-side routes
+such as `/dashboard`. No application secrets or database are needed for the
+current local demo/check-in UI. The unused workspace API server is not deployed.
+
+After deployment succeeds, generate a public domain in the service's networking
+settings to expose the website.
+
+The optional `.railway/railway.ts` describes the same service for Railway CLI
+users. It is not automatically applied by connecting the GitHub repository:
+authenticate and link the CLI to the intended project, then run
+`railway config plan` and review the changes before `railway config apply`.
+
+For the original all-package build, use `pnpm run build:workspace` with the
+environment variables required by those packages.

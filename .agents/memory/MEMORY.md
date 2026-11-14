@@ -1,3 +1,4 @@
 - [Official resource verification](resource-verification.md) — Recheck the live NASA challenge resource page; linked research context is not astronaut telemetry.
 - [Graphics lifecycle](graphics-lifecycle.md) — Graphics support probes must be one-time initialization and must release temporary browser contexts.
 - [Helmet icon transparency](helmet-icon.md) — The astronaut icon's black visor is foreground and must remain opaque when removing backgrounds.
+- [Railway entrypoint detection](railway-entrypoints.md) — GitHub-based deployments must work from root scripts without assuming CLI IaC was applied.

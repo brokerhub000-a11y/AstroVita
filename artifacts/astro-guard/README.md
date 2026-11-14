@@ -27,21 +27,23 @@ pnpm --filter @workspace/astro-guard run typecheck
 
 ## Railway deployment
 
-The repository includes `.railway/railway.ts` for a single Railway web service.
+The root `package.json` exposes `build` and `start` for Railway auto-detection.
 The current UI uses local demo/check-in state and does not call the workspace API
 server, so Railway only needs to run the web service.
 
-After connecting the `brokerhub000-a11y/AstroVita` repository to Railway, install
-the Railway CLI, authenticate, and run from the repository root:
+Connect `brokerhub000-a11y/AstroVita` to Railway with the service root at the
+repository root. Automatic command detection is supported; the equivalent
+commands are:
 
 ```bash
-railway config plan
-railway config apply
+pnpm run build
+pnpm start
 ```
 
 The service builds the Vite app and serves the generated files with Node on
 Railway's assigned `PORT`. The build uses `/` as the site base path and supports
-the `/dashboard` client-side route.
+the `/dashboard` client-side route. `.railway/railway.ts` is an optional CLI
+configuration, not a file applied automatically by GitHub-based deployment.
 
 ## Experience
 
