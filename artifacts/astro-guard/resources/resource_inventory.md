@@ -1,13 +1,13 @@
 # Astro-Guard resource inventory
 
-**Checked:** November 13, 2026  
+**Checked:** November 14, 2026
 **Scope:** The official 2026 NASA Space Apps Challenge page for “Create Health Monitoring Software for Astronauts on Space Missions.”
 
 ## Official challenge resources
 
 | Resource | Source | Status | Relevance |
 | --- | --- | --- | --- |
-| Challenge resources | [Official challenge Resources tab](https://www.spaceappschallenge.org/2026/challenges/health-monitoring-software/?tab=resources) | The tab now links to NASA’s “5 Hazards of Human Spaceflight,” “Risks of Human Spaceflight,” and “Ongoing HRP Research in Space,” plus two Canadian Space Agency resources. These are informational pages; no challenge-specific telemetry file, table, or data dictionary was exposed in the reviewed content. | Source index for the challenge. The linked pages support qualitative context, not readings for an individual astronaut. |
+| Challenge resources | [Official challenge Resources tab](https://www.spaceappschallenge.org/2026/challenges/health-monitoring-software/?tab=resources) | Rechecked November 14, 2026. The tab links to NASA’s “5 Hazards of Human Spaceflight,” “Risks of Human Spaceflight,” and “Ongoing HRP Research in Space,” plus Canadian Space Agency resources. These are informational pages; no challenge-specific telemetry file, table, or data dictionary was exposed. | Source index for the challenge. The linked pages support qualitative context, not readings for an individual astronaut. |
 | Five hazards of human spaceflight | [NASA Human Research Program](https://www.nasa.gov/hrp/hazards/) | NASA describes space radiation, isolation and confinement, distance from Earth, gravity fields, and hostile/closed environments. | Qualitative mission context; not individual sensor observations. |
 | Risks of human spaceflight | [NASA Human Research Program](https://www.nasa.gov/hrp/risks/) | NASA describes risks including cardiovascular adaptations, reduced cardiorespiratory and musculoskeletal fitness, bone changes, altered immune responses, hypoxia, SANS, behavioral changes, and sleep/schedule disruption. | Qualitative risk context used to select illustrative body regions. It does not supply astronaut-specific data or software thresholds. |
 | Ongoing HRP research in space | [NASA Human Research Program](https://www.nasa.gov/hrp/ongoing-hrp-research/) | Linked from the official challenge Resources tab; informational research articles, not a challenge telemetry dataset. | Additional context only; no values are presented as live readings. |

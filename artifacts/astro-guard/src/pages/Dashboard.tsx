@@ -38,8 +38,10 @@ import {
 } from "@/data/demoHealth";
 import {
   formatCheckInValue,
+  MEASUREMENT_CONTEXT_LABELS,
   type HealthCheckInRecord,
 } from "@/data/healthCheckIn";
+import { analyzeRecoveryTrend } from "@/data/recoveryInsights";
 
 type SecondaryReading = { label: string; value: string; unit?: string };
 type PanelReading = {
@@ -67,17 +69,22 @@ function readingFor(
           unit: checkIn.heartRate === undefined ? "" : "bpm",
           name: "Self-entered heart rate",
           isText: checkIn.heartRate === undefined,
-          secondary:
-            checkIn.bloodPressureSystolic !== undefined &&
+          secondary: [
+            ...(checkIn.bloodPressureSystolic !== undefined &&
             checkIn.bloodPressureDiastolic !== undefined
-              ? [
-                  {
-                    label: "Blood pressure",
-                    value: `${formatCheckInValue(checkIn.bloodPressureSystolic)}/${formatCheckInValue(checkIn.bloodPressureDiastolic)}`,
-                    unit: "mmHg",
-                  },
-                ]
-              : [],
+              ? [{
+                  label: "Blood pressure",
+                  value: `${formatCheckInValue(checkIn.bloodPressureSystolic)}/${formatCheckInValue(checkIn.bloodPressureDiastolic)}`,
+                  unit: "mmHg",
+                }]
+              : []),
+            ...(checkIn.sleepHours !== undefined
+              ? [{ label: "Sleep, self-reported", value: formatCheckInValue(checkIn.sleepHours, 1), unit: "h" }]
+              : []),
+            ...(checkIn.fatigue !== undefined
+              ? [{ label: "Fatigue, self-reported", value: formatCheckInValue(checkIn.fatigue), unit: "/ 10" }]
+              : []),
+          ],
         };
       case "lungs":
         return {
@@ -178,13 +185,17 @@ export default function Dashboard() {
   const [tick, setTick] = useState(0);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
-  const [checkIn, setCheckIn] = useState<HealthCheckInRecord | null>(null);
+  const [checkIns, setCheckIns] = useState<HealthCheckInRecord[]>([]);
   const [checkInMode, setCheckInMode] = useState(false);
+  const [newCheckIn, setNewCheckIn] = useState(false);
+  const [recoveryExampleOpen, setRecoveryExampleOpen] = useState(false);
   const [webgl] = useState(() => typeof document !== "undefined" && hasWebGL());
 
   const sc = SCENARIOS[scenario];
   const readings = demoReadings(sc, tick);
   const demoAlerts = getDemoAlerts(sc, checkInMode);
+  const checkIn = checkIns.at(-1) ?? null;
+  const recoveryComparison = checkInMode ? analyzeRecoveryTrend(checkIns) : null;
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -218,12 +229,8 @@ export default function Dashboard() {
   }, [selected, status.kind]);
   useEffect(() => {
     engineRef.current?.setRates(
-      checkInMode && checkIn?.heartRate !== undefined
-        ? checkIn.heartRate
-        : readings.bpm,
-      checkInMode && checkIn?.breathingRate !== undefined
-        ? checkIn.breathingRate
-        : readings.breaths,
+      checkInMode ? checkIn?.heartRate ?? 60 : readings.bpm,
+      checkInMode ? checkIn?.breathingRate ?? 12 : readings.breaths,
     );
   }, [
     readings.bpm,
@@ -321,9 +328,19 @@ export default function Dashboard() {
   const checkInTime = activeCheckIn
     ? new Date(activeCheckIn.recordedAt).toLocaleString()
     : "";
-  const openCheckIn = () => {
+  const openCheckIn = (newEntry = false) => {
     setSourcesOpen(false);
+    setNewCheckIn(newEntry);
     setCheckInOpen(true);
+  };
+  const saveCheckIn = (record: HealthCheckInRecord) => {
+    setCheckIns((history) => newCheckIn
+      ? [...history, record]
+      : history.length
+        ? [...history.slice(0, -1), record]
+        : [record]);
+    setCheckInMode(true);
+    setCheckInOpen(false);
   };
 
   return (
@@ -375,11 +392,11 @@ export default function Dashboard() {
           <button
             ref={checkInButtonRef}
             className="icon-btn"
-            onClick={openCheckIn}
+            onClick={() => openCheckIn()}
             data-testid="button-open-checkin"
           >
             <Activity size={15} />
-            <span>{checkIn ? "Edit check-in" : "Check in"}</span>
+            <span>{checkIns.length ? "Edit latest" : "Check in"}</span>
           </button>
           <button
             ref={sourcesButtonRef}
@@ -404,7 +421,7 @@ export default function Dashboard() {
                     markerEls.current[id] = el;
                     engineRef.current?.bindMarker(id, el);
                   }}
-                  className={`marker${selected === id ? " on" : ""}${demoAlerts.find(a => a.systemId === id) ? ` ${sc.flags[id]}` : ""}${id === "immune" ? " systemic" : ""}`}
+                  className={`marker${selected === id ? " on" : ""}${demoAlerts.find(a => a.systemId === id) ? ` ${sc.flags[id]}` : ""}${id === "immune" ? " systemic" : ""}${checkInMode && id === "heart" && checkIns.length ? " session-marker" : ""}`}
                   style={{ opacity: 0 }}
                   onClick={() => setSelected(id)}
                   aria-label={`Inspect ${SYSTEMS[id].label}${demoAlerts.find(a => a.systemId === id) ? ` — demo ${sc.flags[id]}, simulation only` : checkInMode ? " — not medically assessed" : ""}`}
@@ -414,6 +431,9 @@ export default function Dashboard() {
                   <span className="marker-ring" />
                   <span className="marker-label">
                     {id === "immune" ? "Immune · body-wide" : SYSTEMS[id].label}
+                    {checkInMode && id === "heart" && checkIns.length > 0 && (
+                      <span className="marker-session-label">CHECK-IN</span>
+                    )}
                     {demoAlerts.find(a => a.systemId === id) && (
                       <span className="marker-demo-label" data-testid={`badge-demo-alert-${id}`}>
                         <TriangleAlert size={12} aria-hidden="true" />
@@ -573,7 +593,7 @@ export default function Dashboard() {
                         {checkInMode
                           ? r.isText
                             ? "No matching measurement entered"
-                            : "User-entered · not medically assessed"
+                            : "User-entered · descriptive comparison only"
                           : flag === "alert"
                             ? "Demo alert · scenario script only"
                             : flag === "watch"
@@ -588,6 +608,77 @@ export default function Dashboard() {
                     </div>
                   );
                 })()}
+                {checkInMode && info.id === "heart" && checkIns.length > 0 && (
+                  <section className="recovery-insight" data-testid="section-recovery-comparison">
+                    <div className="kicker">Personal comparison · descriptive only</div>
+                    {recoveryComparison?.kind !== "compared" ? (
+                      <p data-testid="text-recovery-insufficient">
+                        {recoveryComparison?.message ?? "Enter a heart-rate reading to begin."}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="recovery-context">
+                          {MEASUREMENT_CONTEXT_LABELS[checkIn?.measurementContext ?? "unknown"]} · compared with {recoveryComparison.comparisonCount} earlier entries
+                        </p>
+                        <div className="reading-secondary">
+                          <span>Your session reference</span>
+                          <strong>{recoveryComparison.baselineBpm.toFixed(1)} bpm</strong>
+                        </div>
+                        <div className="reading-secondary">
+                          <span>Difference from reference</span>
+                          <strong>{recoveryComparison.deltaBpm > 0 ? "+" : ""}{recoveryComparison.deltaBpm.toFixed(1)} bpm</strong>
+                        </div>
+                        <p data-testid="text-recovery-direction">
+                          {recoveryComparison.direction === "first"
+                            ? "First comparison in this session."
+                            : recoveryComparison.direction === "closer"
+                              ? "The difference is smaller than in the previous comparable entry."
+                              : recoveryComparison.direction === "farther"
+                                ? "The difference is larger than in the previous comparable entry."
+                                : "The difference is unchanged from the previous comparable entry."}
+                        </p>
+                        <p className="recovery-context">
+                          Recorded alongside {recoveryComparison.sleepHours === undefined ? "no sleep duration" : `${recoveryComparison.sleepHours.toFixed(1)} h sleep`} and {recoveryComparison.fatigue === undefined ? "no fatigue score" : `self-reported fatigue ${recoveryComparison.fatigue}/10`}. These values are shown together; they do not establish a cause.
+                        </p>
+                      </>
+                    )}
+                    <p className="recovery-boundary">
+                      The three-entry reference rule is a prototype comparison choice, not a validated medical threshold. Values are not a diagnosis or a measure of safety.
+                    </p>
+                    <p className="recovery-boundary">
+                      NASA discusses cardiovascular changes and sleep/schedule risks separately; these sources do not establish that one caused a change in the other.
+                    </p>
+                    <a
+                      href="https://www.nasa.gov/reference/risk-from-inadequate-sleep-and-irregular-schedules/"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="src-link"
+                      data-testid="link-recovery-sleep-source"
+                    >
+                      NASA sleep and schedule context <ArrowUpRight size={13} />
+                    </a>
+                    <button
+                      className="recovery-example-toggle"
+                      onClick={() => setRecoveryExampleOpen(value => !value)}
+                      aria-expanded={recoveryExampleOpen}
+                      data-testid="button-toggle-recovery-example"
+                    >
+                      {recoveryExampleOpen ? "Hide illustrative example" : "See an illustrative example"}
+                    </button>
+                    {recoveryExampleOpen && (
+                      <div className="recovery-example" role="note" data-testid="card-recovery-example">
+                        <strong>Illustrative values only · not your readings</strong>
+                        <p>Example: three earlier quiet-rest readings average 64 bpm; a later 68 bpm reading is shown as 4 bpm above that small session reference.</p>
+                        <p>Sleep and self-reported fatigue can be viewed alongside it, but this does not show that one caused the other or indicate a health condition.</p>
+                      </div>
+                    )}
+                    <div className="recovery-actions">
+                      <button className="icon-btn" onClick={() => openCheckIn(true)} data-testid="button-add-followup-checkin">
+                        <Activity size={14} /> Record next check-in
+                      </button>
+                    </div>
+                  </section>
+                )}
                 <div
                   className="block"
                   data-testid={`section-guidance-${info.id}`}
@@ -656,6 +747,9 @@ export default function Dashboard() {
               data-testid="section-checkin-additional"
             >
               <div className="kicker">Other self-entered indicators</div>
+              <p className="fine" data-testid="text-checkin-session-count">
+                {checkIns.length} check-in{checkIns.length === 1 ? "" : "s"} in this page session · cleared on refresh
+              </p>
               <div>
                 <span>Blood pressure</span>
                 <strong>
@@ -694,6 +788,21 @@ export default function Dashboard() {
                 <p className="fine" data-testid="text-checkin-timestamp">
                   Recorded {checkInTime} · stored in this page only.
                 </p>
+              )}
+              {!info && (
+                <div className="checkin-session-actions">
+                  <button className="icon-btn" onClick={() => openCheckIn(true)} data-testid="button-add-session-checkin">
+                    <Activity size={14} /> Add next check-in
+                  </button>
+                  <button className="icon-btn" onClick={() => {
+                    if (window.confirm("Clear all check-ins from this page session?")) {
+                      setCheckIns([]);
+                      setCheckInMode(false);
+                    }
+                  }} data-testid="button-clear-session-checkins">
+                    <RotateCcw size={14} /> Clear session
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -803,14 +912,11 @@ export default function Dashboard() {
       </AnimatePresence>
       <HealthCheckInDrawer
         open={checkInOpen}
-        current={checkIn}
+        current={newCheckIn ? null : checkIn}
+        isNewEntry={newCheckIn}
         dialogRef={checkInRef}
         onClose={() => setCheckInOpen(false)}
-        onSave={(record) => {
-          setCheckIn(record);
-          setCheckInMode(true);
-          setCheckInOpen(false);
-        }}
+        onSave={saveCheckIn}
       />
     </div>
   );

@@ -16,12 +16,15 @@ import {
 type NumericFieldName = Exclude<keyof HealthCheckInValues, 'mood'>;
 
 function MeasurementField({
-  name, label, unit, step = '1',
+  name, label, unit, step = '1', min = '0', max, description = 'Optional. Leave blank if not measured.',
 }: {
   name: NumericFieldName;
   label: string;
   unit: string;
   step?: string;
+  min?: string;
+  max?: string;
+  description?: string;
 }) {
   const form = useFormContext<HealthCheckInValues>();
   return (
@@ -33,7 +36,8 @@ function MeasurementField({
             <Input
               {...field}
               type="number"
-              min="0"
+              min={min}
+              max={max}
               step={step}
               inputMode="decimal"
               placeholder="Not measured"
@@ -46,7 +50,7 @@ function MeasurementField({
           </FormControl>
           <span className="checkin-unit">{unit}</span>
         </div>
-        <FormDescription>Optional. Leave blank if not measured.</FormDescription>
+        <FormDescription>{description}</FormDescription>
         <FormMessage />
       </FormItem>
     )} />
@@ -56,31 +60,37 @@ function MeasurementField({
 function toFormValues(record: HealthCheckInRecord | null): HealthCheckInValues {
   if (!record) return EMPTY_HEALTH_CHECK_IN;
   const { recordedAt: _recordedAt, ...values } = record;
-  return values;
+  return { ...values, measurementContext: values.measurementContext ?? 'unknown' };
 }
 
 export function HealthCheckInDrawer({
-  open, current, dialogRef, onClose, onSave,
+  open, current, isNewEntry, dialogRef, onClose, onSave,
 }: {
   open: boolean;
   current: HealthCheckInRecord | null;
+  isNewEntry: boolean;
   dialogRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSave: (record: HealthCheckInRecord) => void;
 }) {
   const form = useForm<HealthCheckInValues>({
     resolver: zodResolver(healthCheckInSchema),
-    defaultValues: EMPTY_HEALTH_CHECK_IN,
+    defaultValues: { ...EMPTY_HEALTH_CHECK_IN, measurementContext: 'unknown' },
     mode: 'onSubmit',
   });
   const { reset } = form;
 
   useEffect(() => {
-    reset(toFormValues(current));
-  }, [current, reset]);
+    reset(isNewEntry
+      ? { ...EMPTY_HEALTH_CHECK_IN, measurementContext: 'unknown' }
+      : toFormValues(current));
+  }, [current, isNewEntry, reset]);
 
   const submit = form.handleSubmit((values) => {
-    onSave({ ...values, recordedAt: new Date().toISOString() });
+    onSave({
+      ...values,
+      recordedAt: !isNewEntry && current ? current.recordedAt : new Date().toISOString(),
+    });
   });
 
   return (
@@ -105,7 +115,7 @@ export function HealthCheckInDrawer({
             <div className="panel-head">
               <div>
                 <div className="kicker">Manual · local only</div>
-                <h2 id="checkin-title">Crew health check-in</h2>
+                <h2 id="checkin-title">{isNewEntry ? 'New crew check-in' : 'Crew health check-in'}</h2>
               </div>
               <button className="icon-btn sq" type="button" onClick={onClose} autoFocus
                 aria-label="Close check-in" data-testid="button-close-checkin">×</button>
@@ -123,7 +133,7 @@ export function HealthCheckInDrawer({
                 <section className="checkin-section" aria-labelledby="checkin-circulation">
                   <h3 id="checkin-circulation">Circulation</h3>
                   <div className="checkin-grid">
-                    <MeasurementField name="heartRate" label="Heart rate" unit="bpm" />
+                    <MeasurementField name="heartRate" label="Heart rate" unit="bpm" min="1" max="300" />
                     <MeasurementField name="bloodPressureSystolic" label="Systolic pressure" unit="mmHg" />
                     <MeasurementField name="bloodPressureDiastolic" label="Diastolic pressure" unit="mmHg" />
                   </div>
@@ -139,9 +149,10 @@ export function HealthCheckInDrawer({
                 </section>
 
                 <section className="checkin-section" aria-labelledby="checkin-recovery">
-                  <h3 id="checkin-recovery">Sleep, activity, and mood</h3>
+                  <h3 id="checkin-recovery">Sleep, fatigue, and activity</h3>
                   <div className="checkin-grid">
-                    <MeasurementField name="sleepHours" label="Sleep last cycle" unit="hours" step="0.1" />
+                    <MeasurementField name="sleepHours" label="Sleep last cycle" unit="hours" step="0.1" max="24" />
+                    <MeasurementField name="fatigue" label="Fatigue · self-reported" unit="/ 10" min="1" max="10" description="1 = lower fatigue; 10 = higher. This is not a medical score." />
                     <MeasurementField name="exerciseMinutes" label="Exercise today" unit="minutes" />
                     <FormField control={form.control} name="mood" render={({ field }) => (
                       <FormItem className="checkin-field">
@@ -161,19 +172,53 @@ export function HealthCheckInDrawer({
                   </div>
                 </section>
 
+                <section className="checkin-section" aria-labelledby="checkin-context">
+                  <h3 id="checkin-context">Heart-rate measurement context</h3>
+                  <div className="checkin-grid">
+                    <FormField control={form.control} name="measurementContext" render={({ field }) => (
+                      <FormItem className="checkin-field">
+                        <FormLabel>When was the heart rate measured?</FormLabel>
+                        <FormControl>
+                          <select {...field} value={field.value ?? 'unknown'} data-testid="input-checkin-context">
+                            <option value="unknown">Not sure</option>
+                            <option value="quiet-rest">During quiet rest</option>
+                            <option value="after-activity">After activity</option>
+                          </select>
+                        </FormControl>
+                        <FormDescription>For comparison only, select quiet rest if that describes the measurement.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="measurementQuality" render={({ field }) => (
+                      <FormItem className="checkin-field">
+                        <FormLabel>How reliable does it seem?</FormLabel>
+                        <FormControl>
+                          <select {...field} value={field.value ?? ''} onChange={(event) => field.onChange(event.target.value || undefined)} data-testid="input-checkin-quality">
+                            <option value="">Not sure</option>
+                            <option value="confident">Confident</option>
+                            <option value="uncertain">Uncertain</option>
+                          </select>
+                        </FormControl>
+                        <FormDescription>Self-reported context; it does not validate a sensor.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </section>
+
                 <div className="checkin-guidance">
                   <strong>What to do with a reading</strong>
                   <ol>
                     <li>Check that the measurement and unit were entered correctly.</li>
-                    <li>Compare it with the limits issued for your mission.</li>
-                    <li>If it concerns you, follow the onboard medical procedure and contact flight medical support.</li>
+                    <li>Record the context and compare only with readings taken in similar conditions.</li>
+                    <li>If you have a concern, follow the mission's medical procedure and contact flight medical support.</li>
                   </ol>
-                  <p>This prototype has no mission-specific medical limits or treatment instructions.</p>
+                  <p>AstroVita shows descriptive comparisons only. This prototype has no mission-specific thresholds or treatment instructions.</p>
                 </div>
 
                 <div className="checkin-actions">
                   <button className="start-btn checkin-submit" type="submit" data-testid="button-submit-checkin">
-                    Use this check-in
+                    {isNewEntry ? 'Add this check-in' : 'Update this check-in'}
                   </button>
                   <button className="icon-btn" type="button" onClick={onClose} data-testid="button-cancel-checkin">
                     Cancel

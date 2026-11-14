@@ -35,6 +35,7 @@ Astro-Guard is a NASA Space Apps Challenge research and anatomy visualization we
 - Synthetic readings and scripted alert drills for all five displayed systems are permitted only when clearly labeled as simulation; never present them as NASA or live sensor data. Demo alerts must never classify manual check-in entries.
 - The optional manual check-in accepts raw user-entered measurements only. Keep entries in page memory; never transmit or persist them, and do not label them as NASA or sensor data.
 - Do not invent clinical thresholds, diagnoses, risk scores, treatment advice, or emergency instructions. General prevention education is allowed only when source-cited and clearly not driven by entered values. Personalized assessment requires a mission-approved medical protocol.
+- A same-person comparison of manually entered readings may describe numerical differences only when records are recent, self-reported as comparable, and measurement quality is stated. Do not infer causes, health status, safety, or treatment from these descriptive trends; keep all entries in page memory only.
 - The anatomy model is a third-party educational visual asset, not NASA data or a clinical tool.
 
 ## Product

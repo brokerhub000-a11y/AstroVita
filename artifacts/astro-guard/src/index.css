@@ -794,6 +794,23 @@ body { background: var(--ink); color: var(--text); font-family: var(--app-font-s
 .checkin-time { margin: 10px 0 0; }
 .checkin-summary p.fine { margin: 8px 0 0; }
 .checkin-pill .demo-dot { background: var(--mint); }
+.marker-session .marker-ring, .marker-session .marker-ring::before { border-color: var(--mint); }
+.marker-session .marker-ring::after { background: var(--mint); }
+.marker-session .marker-label { border-color: rgba(159,230,210,.35); }
+.marker-session-label { display: inline-flex; align-items: center; color: var(--mint); font-size: 8px; }
+.flag-row.checkin-unassessed { color: var(--mint); background: rgba(159,230,210,.07); }
+.recovery-insight { margin: 14px 0 18px; padding: 15px; background: rgba(159,230,210,.045); border: 1px solid rgba(159,230,210,.2); border-radius: 13px; }
+.recovery-insight > .kicker { color: var(--mint); }
+.recovery-insight > p { font-size: 12px; line-height: 1.55; color: #c6d3e2; margin: 9px 0; }
+.recovery-insight .recovery-context { color: var(--dim); font-size: 10px; }
+.recovery-insight .recovery-boundary { color: var(--dim); font-size: 10px; border-top: 1px solid var(--line); padding-top: 9px; }
+.recovery-actions { display: flex; flex-wrap: wrap; margin-top: 10px; }
+.recovery-example-toggle { margin-top: 4px; border: 0; padding: 4px 0; color: #b9c8da; background: transparent; text-decoration: underline; text-underline-offset: 3px; font-size: 11px; cursor: pointer; }
+.recovery-example-toggle:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+.recovery-example { margin-top: 10px; padding: 11px; border-radius: 9px; background: var(--ink-2); border: 1px dashed rgba(159,230,210,.3); }
+.recovery-example strong { color: var(--mint); font-size: 10px; }
+.recovery-example p { margin: 7px 0 0; color: #c6d3e2; font-size: 11px; line-height: 1.5; }
+.checkin-session-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 
 @media (max-width: 1100px) { .dash-grid { grid-template-columns: minmax(0,1fr) 300px; } .demo-pill-long { display: none; } }
 @media (max-width: 820px) {
