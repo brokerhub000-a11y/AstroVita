@@ -64,11 +64,13 @@ function toFormValues(record: HealthCheckInRecord | null): HealthCheckInValues {
 }
 
 export function HealthCheckInDrawer({
-  open, current, isNewEntry, dialogRef, onClose, onSave,
+  open, current, isNewEntry, crewName, persistenceAvailable, dialogRef, onClose, onSave,
 }: {
   open: boolean;
   current: HealthCheckInRecord | null;
   isNewEntry: boolean;
+  crewName: string;
+  persistenceAvailable: boolean;
   dialogRef: RefObject<HTMLElement | null>;
   onClose: () => void;
   onSave: (record: HealthCheckInRecord) => void;
@@ -114,7 +116,7 @@ export function HealthCheckInDrawer({
           >
             <div className="panel-head">
               <div>
-                <div className="kicker">Manual · local only</div>
+                <div className="kicker">Manual · {crewName}</div>
                 <h2 id="checkin-title">{isNewEntry ? 'New crew check-in' : 'Crew health check-in'}</h2>
               </div>
               <button className="icon-btn sq" type="button" onClick={onClose} autoFocus
@@ -125,7 +127,10 @@ export function HealthCheckInDrawer({
               Enter any values already measured with a mission-approved method. You can leave any field blank.
             </p>
             <div className="checkin-privacy" role="note" data-testid="text-checkin-privacy">
-              This entry stays in this page only. It is not sent to a server or saved after refresh. AstroVita does not classify readings, diagnose conditions, or set medical limits.
+              {persistenceAvailable
+                ? "This entry is saved in this browser under the selected mock profile. It is not sent to a server. Browser storage is not appropriate for real medical records."
+                : "Browser storage is unavailable or could not be read, so this entry may be temporary and could disappear after a refresh. It is not sent to a server."}{" "}
+              AstroVita does not classify readings, diagnose conditions, or set medical limits.
             </div>
 
             <Form {...form}>

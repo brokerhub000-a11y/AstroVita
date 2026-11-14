@@ -32,11 +32,17 @@ import {
   SCENARIO_ORDER,
   SYSTEMS,
   SYSTEM_ORDER,
-  demoReadings,
   type Readings,
   type ScenarioId,
   type SystemId,
 } from "@/data/demoHealth";
+import {
+  CREW_PROFILES,
+  getDemoReadingsForCrew,
+  isCrewProfileId,
+  loadCrewProfileState,
+  saveCrewProfileState,
+} from "@/data/crewProfiles";
 import {
   formatCheckInValue,
   createHealthCheckInCsv,
@@ -167,6 +173,14 @@ function motionDescription(
   return "This motion is illustrative only; no direct measurement of this system was entered.";
 }
 
+function getBrowserStorage(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export default function Dashboard() {
   const stageRef = useRef<HTMLDivElement>(null);
   const sourcesRef = useRef<HTMLElement>(null);
@@ -187,17 +201,48 @@ export default function Dashboard() {
   const [tick, setTick] = useState(0);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [checkInOpen, setCheckInOpen] = useState(false);
-  const [checkIns, setCheckIns] = useState<HealthCheckInRecord[]>([]);
+  const [crewProfileState, setCrewProfileState] = useState(() =>
+    loadCrewProfileState(getBrowserStorage()),
+  );
+  const [crewStorageWarning, setCrewStorageWarning] = useState(
+    crewProfileState.warning,
+  );
   const [checkInMode, setCheckInMode] = useState(false);
   const [newCheckIn, setNewCheckIn] = useState(false);
   const [recoveryExampleOpen, setRecoveryExampleOpen] = useState(false);
   const [webgl] = useState(() => typeof document !== "undefined" && hasWebGL());
 
+  const activeCrewProfile =
+    CREW_PROFILES.find(
+      (profile) => profile.id === crewProfileState.selectedProfileId,
+    ) ?? CREW_PROFILES[0];
+  const checkIns =
+    crewProfileState.checkInsByProfile[activeCrewProfile.id] ?? [];
   const sc = SCENARIOS[scenario];
-  const readings = demoReadings(sc, tick);
+  const readings = getDemoReadingsForCrew(sc, tick, activeCrewProfile);
   const demoAlerts = getDemoAlerts(sc, checkInMode);
   const checkIn = checkIns.at(-1) ?? null;
   const recoveryComparison = checkInMode ? analyzeRecoveryTrend(checkIns) : null;
+
+  useEffect(() => {
+    if (!crewProfileState.canPersist) return;
+    const storage = getBrowserStorage();
+    if (!storage) {
+      setCrewStorageWarning(
+        "Browser storage is unavailable; changes will not survive a refresh.",
+      );
+      return;
+    }
+
+    try {
+      saveCrewProfileState(storage, crewProfileState);
+      setCrewStorageWarning(null);
+    } catch {
+      setCrewStorageWarning(
+        "Could not save on this browser; check-ins may be lost after a refresh.",
+      );
+    }
+  }, [crewProfileState]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -330,17 +375,37 @@ export default function Dashboard() {
   const checkInTime = activeCheckIn
     ? new Date(activeCheckIn.recordedAt).toLocaleString()
     : "";
+  const selectCrewProfile = (value: string) => {
+    if (!isCrewProfileId(value)) return;
+    const nextHistory = crewProfileState.checkInsByProfile[value] ?? [];
+    setCrewProfileState((state) => ({ ...state, selectedProfileId: value }));
+    setCheckInMode(nextHistory.length > 0);
+    setCheckInOpen(false);
+    setSourcesOpen(false);
+    setSelected(null);
+    setRecoveryExampleOpen(false);
+  };
   const openCheckIn = (newEntry = false) => {
     setSourcesOpen(false);
     setNewCheckIn(newEntry);
     setCheckInOpen(true);
   };
   const saveCheckIn = (record: HealthCheckInRecord) => {
-    setCheckIns((history) => newCheckIn
-      ? [...history, record]
-      : history.length
-        ? [...history.slice(0, -1), record]
-        : [record]);
+    setCrewProfileState((state) => {
+      const history = state.checkInsByProfile[activeCrewProfile.id] ?? [];
+      const updatedHistory = newCheckIn
+        ? [...history, record]
+        : history.length
+          ? [...history.slice(0, -1), record]
+          : [record];
+      return {
+        ...state,
+        checkInsByProfile: {
+          ...state.checkInsByProfile,
+          [activeCrewProfile.id]: updatedHistory,
+        },
+      };
+    });
     setCheckInMode(true);
     setCheckInOpen(false);
   };
@@ -352,7 +417,7 @@ export default function Dashboard() {
     const url = URL.createObjectURL(file);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `astrovita-check-ins-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.download = `astrovita-${activeCrewProfile.callsign.toLowerCase()}-check-ins-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -366,6 +431,33 @@ export default function Dashboard() {
           <span className="brand-orb" aria-hidden="true" />
           <span>AstroVita</span>
         </Link>
+        <div className="crew-profile-switcher" data-testid="control-crew-profile">
+          <div className="crew-profile-avatar" aria-hidden="true">
+            {activeCrewProfile.initials}
+          </div>
+          <div className="crew-profile-details">
+            <label htmlFor="crew-profile-select">DEMO CREW PROFILE</label>
+            <select
+              id="crew-profile-select"
+              value={activeCrewProfile.id}
+              onChange={(event) => selectCrewProfile(event.target.value)}
+              data-testid="select-crew-profile"
+            >
+              {CREW_PROFILES.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name} · {profile.callsign}
+                </option>
+              ))}
+            </select>
+            <span
+              className={`crew-profile-caption${crewStorageWarning ? " warning" : ""}`}
+              role="status"
+            >
+              {crewStorageWarning ??
+                `${activeCrewProfile.role} · mock data stored in this browser`}
+            </span>
+          </div>
+        </div>
         {/* <div className={`demo-pill${checkInMode ? ' checkin-pill' : ''}`} role="note" data-testid="text-demo-disclaimer">
           <span className="demo-dot" aria-hidden="true" />
           <strong>{checkInMode ? 'Local check-in' : 'Local demo'}</strong>
@@ -745,7 +837,9 @@ export default function Dashboard() {
                 exit={{ opacity: 0 }}
               >
                 <div className="kicker">
-                  {checkInMode ? "Crew check-in · local" : "Crew member · demo"}
+                  {checkInMode
+                    ? `${activeCrewProfile.callsign} · local check-in`
+                    : `${activeCrewProfile.callsign} · mock crew profile`}
                 </div>
                 <h2>Full body</h2>
                 <p className="lede">
@@ -757,14 +851,14 @@ export default function Dashboard() {
               </motion.div>
             )}
           </AnimatePresence>
-          {checkInMode && activeCheckIn && (
+                {checkInMode && activeCheckIn && (
             <div
               className="checkin-summary"
               data-testid="section-checkin-additional"
             >
               <div className="kicker">Other self-entered indicators</div>
               <p className="fine" data-testid="text-checkin-session-count">
-                {checkIns.length} check-in{checkIns.length === 1 ? "" : "s"} in this page session · cleared on refresh
+                {checkIns.length} check-in{checkIns.length === 1 ? "" : "s"} for {activeCrewProfile.callsign} · saved on this browser
               </p>
               <div>
                 <span>Blood pressure</span>
@@ -816,7 +910,7 @@ export default function Dashboard() {
               </div>
               {!info && (
                 <p className="fine" data-testid="text-checkin-timestamp">
-                  Recorded {checkInTime} · stored in this page only.
+                  Recorded {checkInTime} · stored on this browser only.
                 </p>
               )}
               {!info && (
@@ -825,8 +919,14 @@ export default function Dashboard() {
                     <Activity size={14} /> Add next check-in
                   </button>
                   <button className="icon-btn" onClick={() => {
-                    if (window.confirm("Clear all check-ins from this page session?")) {
-                      setCheckIns([]);
+                    if (window.confirm(`Clear all saved check-ins for ${activeCrewProfile.callsign} from this browser?`)) {
+                      setCrewProfileState((state) => ({
+                        ...state,
+                        checkInsByProfile: {
+                          ...state.checkInsByProfile,
+                          [activeCrewProfile.id]: [],
+                        },
+                      }));
                       setCheckInMode(false);
                     }
                   }} data-testid="button-clear-session-checkins">
@@ -841,7 +941,7 @@ export default function Dashboard() {
               className="fine checkin-time"
               data-testid="text-checkin-timestamp"
             >
-              Recorded {checkInTime} · stored in this page only.
+              Recorded {checkInTime} · stored on this browser only.
             </p>
           )}
         </aside>
@@ -944,6 +1044,8 @@ export default function Dashboard() {
         open={checkInOpen}
         current={newCheckIn ? null : checkIn}
         isNewEntry={newCheckIn}
+        crewName={`${activeCrewProfile.name} · ${activeCrewProfile.callsign}`}
+        persistenceAvailable={crewProfileState.canPersist && !crewStorageWarning}
         dialogRef={checkInRef}
         onClose={() => setCheckInOpen(false)}
         onSave={saveCheckIn}
