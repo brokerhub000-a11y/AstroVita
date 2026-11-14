@@ -747,6 +747,31 @@ body { background: var(--ink); color: var(--text); font-family: var(--app-font-s
 .panel-head { display: flex; justify-content: space-between; align-items: start; gap: 10px; }
 .lede { color: #b9c8da; font-size: 13px; line-height: 1.6; }
 .reading { margin: 18px 0; padding: 18px; border-radius: 16px; background: var(--ink-2); border: 1px solid var(--line); }
+.health-history { margin: 14px 0 18px; padding: 14px; border-radius: 14px; background: rgba(16,27,45,.78); border: 1px solid var(--line); }
+.health-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.health-history-head .kicker { margin-bottom: 4px; }
+.health-history-head h3 { margin: 0; color: var(--text); font: 500 14px var(--app-font-sans); }
+.history-unit { color: var(--dim); font: 10px var(--app-font-mono); }
+.history-source-toggle { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: rgba(10,17,32,.55); }
+.history-source-toggle button { flex: 1; min-width: 0; border: 0; border-radius: 7px; padding: 6px 8px; color: var(--dim); background: transparent; font-size: 10px; cursor: pointer; }
+.history-source-toggle button.on { color: var(--text); background: var(--ink-3); box-shadow: inset 0 0 0 1px rgba(159,230,210,.3); }
+.history-source-toggle button:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.history-source-note { margin: 8px 0 2px; color: var(--dim); font-size: 9px; line-height: 1.45; }
+.health-history-chart { width: 100%; height: 142px; margin-top: 4px; }
+.health-history-chart .recharts-surface { overflow: visible; }
+.history-tooltip { display: grid; gap: 4px; max-width: 210px; padding: 9px 11px; border: 1px solid rgba(183,203,225,.24); border-radius: 9px; color: var(--text); background: #101b2d; font-size: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.24); }
+.history-tooltip strong { color: #b9c8da; font-weight: 500; }
+.history-tooltip small { color: var(--dim); }
+.history-footnote { margin: 6px 0 0; color: var(--dim); font-size: 9px; line-height: 1.45; }
+.history-empty { display: grid; min-height: 94px; place-items: center; padding: 14px; color: var(--dim); text-align: center; font-size: 11px; line-height: 1.55; }
+.immune-history-grid { display: grid; grid-template-columns: repeat(7, minmax(0,1fr)); gap: 8px 5px; margin: 13px 0 10px; }
+.immune-history-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--dim); font: 9px var(--app-font-mono); }
+.immune-history-cell i, .immune-history-legend i { display: block; width: 8px; height: 8px; border-radius: 50%; background: #536174; }
+.immune-history-cell.sample-logged i, .immune-history-legend i.sample-logged { background: var(--mint); }
+.immune-history-cell.result-pending i, .immune-history-legend i.result-pending { background: var(--amber); }
+.immune-history-legend { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--dim); font-size: 9px; }
+.immune-history-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.immune-history-legend i { width: 7px; height: 7px; }
 .reading-name { font-size: 12px; color: var(--dim); }
 .reading-val { display: flex; align-items: baseline; gap: 8px; margin: 6px 0 12px; }
 .reading-val span { font: 500 52px/1 var(--app-font-mono); letter-spacing: -.03em; display: inline-block; }

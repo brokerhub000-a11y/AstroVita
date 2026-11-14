@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -50,6 +50,13 @@ import {
   type HealthCheckInRecord,
 } from "@/data/healthCheckIn";
 import { analyzeRecoveryTrend } from "@/data/recoveryInsights";
+import type { HistorySource } from "@/data/healthHistory";
+
+const HealthHistoryPanel = lazy(() =>
+  import("@/components/HealthHistoryPanel").then((module) => ({
+    default: module.HealthHistoryPanel,
+  })),
+);
 
 type SecondaryReading = { label: string; value: string; unit?: string };
 type PanelReading = {
@@ -207,7 +214,14 @@ export default function Dashboard() {
   const [crewStorageWarning, setCrewStorageWarning] = useState(
     crewProfileState.warning,
   );
-  const [checkInMode, setCheckInMode] = useState(false);
+  const selectedProfileHistory =
+    crewProfileState.checkInsByProfile[crewProfileState.selectedProfileId] ?? [];
+  const [checkInMode, setCheckInMode] = useState(
+    selectedProfileHistory.length > 0,
+  );
+  const [historySource, setHistorySource] = useState<HistorySource>(
+    selectedProfileHistory.length > 0 ? "check-ins" : "mock",
+  );
   const [newCheckIn, setNewCheckIn] = useState(false);
   const [recoveryExampleOpen, setRecoveryExampleOpen] = useState(false);
   const [webgl] = useState(() => typeof document !== "undefined" && hasWebGL());
@@ -380,6 +394,7 @@ export default function Dashboard() {
     const nextHistory = crewProfileState.checkInsByProfile[value] ?? [];
     setCrewProfileState((state) => ({ ...state, selectedProfileId: value }));
     setCheckInMode(nextHistory.length > 0);
+    setHistorySource(nextHistory.length > 0 ? "check-ins" : "mock");
     setCheckInOpen(false);
     setSourcesOpen(false);
     setSelected(null);
@@ -407,6 +422,7 @@ export default function Dashboard() {
       };
     });
     setCheckInMode(true);
+    setHistorySource("check-ins");
     setCheckInOpen(false);
   };
   const downloadCheckIns = () => {
@@ -490,7 +506,10 @@ export default function Dashboard() {
           ) : (
             <button
               className="icon-btn"
-              onClick={() => setCheckInMode(false)}
+              onClick={() => {
+                setCheckInMode(false);
+                setHistorySource("mock");
+              }}
               data-testid="button-return-to-demo"
             >
               <Play size={15} />
@@ -716,6 +735,21 @@ export default function Dashboard() {
                     </div>
                   );
                 })()}
+                <Suspense
+                  fallback={
+                    <div className="history-empty" role="status">
+                      Loading measurement history…
+                    </div>
+                  }
+                >
+                  <HealthHistoryPanel
+                    systemId={info.id}
+                    profile={activeCrewProfile}
+                    checkIns={checkIns}
+                    source={historySource}
+                    onSourceChange={setHistorySource}
+                  />
+                </Suspense>
                 {checkInMode && info.id === "heart" && checkIns.length > 0 && (
                   <section className="recovery-insight" data-testid="section-recovery-comparison">
                     <div className="kicker">Personal comparison · descriptive only</div>
@@ -928,6 +962,7 @@ export default function Dashboard() {
                         },
                       }));
                       setCheckInMode(false);
+                      setHistorySource("mock");
                     }
                   }} data-testid="button-clear-session-checkins">
                     <RotateCcw size={14} /> Clear session
