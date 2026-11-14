@@ -1,4 +1,4 @@
-# Astro-Guard
+# AstroVita
 
 A two-screen astronaut-health visualization for the NASA Space Apps Challenge “Create Health Monitoring Software for Astronauts on Space Missions.”
 
@@ -25,9 +25,27 @@ The app is also served through its managed Replit web workflow. For a static che
 pnpm --filter @workspace/astro-guard run typecheck
 ```
 
+## Railway deployment
+
+The repository includes `.railway/railway.ts` for a single Railway web service.
+The current UI uses local demo/check-in state and does not call the workspace API
+server, so Railway only needs to run the web service.
+
+After connecting the `brokerhub000-a11y/AstroVita` repository to Railway, install
+the Railway CLI, authenticate, and run from the repository root:
+
+```bash
+railway config plan
+railway config apply
+```
+
+The service builds the Vite app and serves the generated files with Node on
+Railway's assigned `PORT`. The build uses `/` as the site base path and supports
+the `/dashboard` client-side route.
+
 ## Experience
 
-- `/` — short Earth-from-space introduction
+- `/` — short introduction with the animated astronaut
 - `/dashboard` — interactive translucent 3D anatomy and selected-system panel
 - Legacy research routes redirect to the two-screen experience.
 
